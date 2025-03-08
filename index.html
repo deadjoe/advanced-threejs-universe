@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>高级 Three.js 宇宙场景</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div id="container"></div>
+    
+    <div id="info-panel" class="panel">
+        <h2>天体信息</h2>
+        <div id="planet-info">点击天体查看详情</div>
+    </div>
+    
+    <div id="controls-panel" class="panel">
+        <h2>场景控制</h2>
+        <div class="control-group">
+            <label for="stars-count">星星数量:</label>
+            <input type="range" id="stars-count" min="1000" max="10000" value="5000">
+            <span id="stars-count-value">5000</span>
+        </div>
+        <div class="control-group">
+            <label for="light-intensity">光照强度:</label>
+            <input type="range" id="light-intensity" min="0.1" max="2" step="0.1" value="1">
+            <span id="light-intensity-value">1.0</span>
+        </div>
+        <div class="control-group">
+            <button id="auto-rotate-toggle">自动旋转: 开</button>
+            <button id="reset-camera">重置相机</button>
+        </div>
+        <div class="control-group">
+            <h3>预设场景:</h3>
+            <button id="preset-solar">太阳系</button>
+            <button id="preset-nebula">星云景观</button>
+            <button id="preset-blackhole">黑洞环境</button>
+        </div>
+    </div>
+    
+    <div id="loading">
+        <div class="spinner"></div>
+        <div class="loading-text">加载中...</div>
+    </div>
+    
+    <div id="stats"></div>
+    
+    <!-- Three.js 和相关库 -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.149.0/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.149.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.149.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.149.0/examples/js/postprocessing/EffectComposer.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.149.0/examples/js/postprocessing/RenderPass.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.149.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.149.0/examples/js/shaders/CopyShader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.149.0/examples/js/postprocessing/ShaderPass.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.149.0/examples/js/libs/stats.min.js"></script>
+    
+    <!-- 自定义 JavaScript -->
+    <script src="js/utils.js"></script>
+    <script src="js/shaders.js"></script>
+    <script src="js/celestialBodies.js"></script>
+    <script src="js/effects.js"></script>
+    <script src="js/interactions.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>
