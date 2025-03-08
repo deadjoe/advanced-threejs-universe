@@ -13,66 +13,84 @@ let starField;
 
 // 初始化函数
 function init() {
-    clock = new THREE.Clock();
-    
-    // 初始化场景
-    scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x000000);
-    
-    // 初始化相机
-    const aspect = window.innerWidth / window.innerHeight;
-    camera = new THREE.PerspectiveCamera(60, aspect, 0.1, 10000);
-    camera.position.set(0, 50, 150);
-    
-    // 初始化渲染器
-    renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(window.devicePixelRatio);
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.0;
-    document.getElementById('container').appendChild(renderer.domElement);
-    
-    // 初始化性能监控
-    stats = new Stats();
-    document.getElementById('stats').appendChild(stats.dom);
-    
-    // 初始化轨道控制器
-    controls = new THREE.OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true;
-    controls.dampingFactor = 0.05;
-    controls.minDistance = 5;
-    controls.maxDistance = 500;
-    
-    // 初始化射线投射器
-    raycaster = new THREE.Raycaster();
-    mouse = new THREE.Vector2();
-    
-    // 创建天体
-    createSolarSystem();
-    
-    // 创建星域背景
-    createStarField(5000);
-    
-    // 创建星云
-    createNebulae();
-    
-    // 设置环境光照
-    const ambientLight = new THREE.AmbientLight(0x333333);
-    scene.add(ambientLight);
-    
-    // 设置后期处理
-    setupPostProcessing();
-    
-    // 初始化交互事件
-    initInteractions();
-    
-    // 立即移除加载界面，处理纹理缺失的情况
-    document.getElementById('loading').style.display = 'none';
-    
-    // 开始动画循环
-    animate();
+    try {
+        console.log("初始化开始...");
+        
+        // 立即移除加载界面，防止出错时永久卡在加载状态
+        document.getElementById('loading').style.display = 'none';
+        
+        clock = new THREE.Clock();
+        
+        // 初始化场景
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x000000);
+        
+        // 初始化相机
+        const aspect = window.innerWidth / window.innerHeight;
+        camera = new THREE.PerspectiveCamera(60, aspect, 0.1, 10000);
+        camera.position.set(0, 50, 150);
+        
+        // 初始化渲染器
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.shadowMap.enabled = true;
+        
+        // 添加到DOM
+        document.getElementById('container').appendChild(renderer.domElement);
+        
+        // 初始化性能监控
+        try {
+            stats = new Stats();
+            document.getElementById('stats').appendChild(stats.dom);
+        } catch (e) {
+            console.warn("Stats初始化失败，继续执行其他部分", e);
+            stats = { update: function() {} }; // 创建空的stats对象，防止后续调用出错
+        }
+        
+        // 初始化轨道控制器
+        controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.minDistance = 5;
+        controls.maxDistance = 500;
+        
+        // 初始化射线投射器
+        raycaster = new THREE.Raycaster();
+        mouse = new THREE.Vector2();
+        
+        // 设置环境光照
+        const ambientLight = new THREE.AmbientLight(0x555555);
+        scene.add(ambientLight);
+        
+        // 创建天体
+        createSolarSystem();
+        
+        // 创建星域背景
+        createStarField(2000);  // 减少星星数量，提高性能
+        
+        // 设置后期处理 - 简化或跳过
+        // setupPostProcessing();
+        
+        // 初始化交互事件
+        initInteractions();
+        
+        console.log("初始化完成，开始动画循环");
+        
+        // 开始动画循环
+        animate();
+    } catch (e) {
+        console.error("初始化过程中出错:", e);
+        // 确保加载界面被移除
+        document.getElementById('loading').style.display = 'none';
+        // 显示错误信息
+        document.getElementById('container').innerHTML = `
+            <div style="color: white; padding: 20px; text-align: center;">
+                <h2>加载出错</h2>
+                <p>详情请查看控制台</p>
+            </div>
+        `;
+    }
 }
 
 // 创建太阳系
@@ -114,8 +132,12 @@ function createSolarSystem() {
     createPlanet('uranus', 4, 210, 0.1, 0x4deeea, 0.003, 0.006, 'textures/uranus.jpg');
     createPlanet('neptune', 3.88, 245, 0.1, 0x3838ff, 0.002, 0.005, 'textures/neptune.jpg');
     
-    // 创建月球
-    createMoon(planets.earth, 0.27, 2.5, 0.02, 0xaaaaaa, 'textures/moon.jpg');
+    // 延迟创建月球，确保地球已经创建
+    setTimeout(() => {
+        if (planets.earth) {
+            createMoon(planets.earth, 0.27, 2.5, 0.02, 0xaaaaaa, 'textures/moon.jpg');
+        }
+    }, 1000);
     
     // 创建土星环
     createSaturnRings(planets.saturn);
@@ -662,32 +684,42 @@ function updateCelestialBodies(delta) {
 
 // 动画循环
 function animate() {
-    requestAnimationFrame(animate);
-    
-    const delta = clock.getDelta() * 50;
-    
-    // 更新控制器
-    controls.update();
-    
-    if (autoRotate) {
-        controls.autoRotate = true;
-        controls.autoRotateSpeed = 0.5;
-    } else {
-        controls.autoRotate = false;
+    try {
+        requestAnimationFrame(animate);
+        
+        const delta = clock.getDelta() * 50;
+        
+        // 更新控制器
+        controls.update();
+        
+        if (autoRotate) {
+            controls.autoRotate = true;
+            controls.autoRotateSpeed = 0.5;
+        } else {
+            controls.autoRotate = false;
+        }
+        
+        // 更新天体
+        try {
+            updateCelestialBodies(delta);
+        } catch (e) {
+            console.warn("更新天体位置时出错", e);
+        }
+        
+        // 渲染场景
+        try {
+            renderer.render(scene, camera);
+        } catch (e) {
+            console.error("渲染场景时出错", e);
+        }
+        
+        // 更新性能监控
+        if (stats && stats.update) {
+            stats.update();
+        }
+    } catch (e) {
+        console.error("动画循环中出错:", e);
     }
-    
-    // 更新天体
-    updateCelestialBodies(delta);
-    
-    // 更新后期处理
-    if (composer) {
-        composer.render();
-    } else {
-        renderer.render(scene, camera);
-    }
-    
-    // 更新性能监控
-    stats.update();
 }
 
 // 处理窗口大小改变
