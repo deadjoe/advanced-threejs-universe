@@ -68,10 +68,8 @@ function init() {
     // 初始化交互事件
     initInteractions();
     
-    // 移除加载界面
-    setTimeout(() => {
-        document.getElementById('loading').style.display = 'none';
-    }, 1500);
+    // 立即移除加载界面，处理纹理缺失的情况
+    document.getElementById('loading').style.display = 'none';
     
     // 开始动画循环
     animate();
@@ -81,7 +79,8 @@ function init() {
 function createSolarSystem() {
     // 太阳
     const sunGeometry = new THREE.SphereGeometry(15, 64, 64);
-    const sunMaterial = createSunMaterial();
+    // 使用简单材质代替自定义着色器材质，避免着色器错误
+    const sunMaterial = new THREE.MeshBasicMaterial({ color: 0xffff00 });
     const sun = new THREE.Mesh(sunGeometry, sunMaterial);
     scene.add(sun);
     planets.sun = sun;
@@ -94,8 +93,15 @@ function createSolarSystem() {
     sunLight.shadow.mapSize.height = 2048;
     scene.add(sunLight);
     
-    // 添加太阳光晕
-    const sunGlow = createSunGlow(20);
+    // 简化的太阳光晕
+    const glowGeometry = new THREE.SphereGeometry(20, 32, 32);
+    const glowMaterial = new THREE.MeshBasicMaterial({
+        color: 0xffdd66,
+        transparent: true,
+        opacity: 0.3,
+        side: THREE.BackSide
+    });
+    const sunGlow = new THREE.Mesh(glowGeometry, glowMaterial);
     sun.add(sunGlow);
     
     // 创建行星
@@ -128,53 +134,81 @@ function createPlanet(name, size, distance, tilt, color, orbitalSpeed, rotationS
     // 使用纹理时异步加载
     if (texturePath) {
         const textureLoader = new THREE.TextureLoader();
-        textureLoader.load(texturePath, function(texture) {
-            let material;
-            
-            if (normalMap) {
-                textureLoader.load(normalMap, function(normal) {
+        textureLoader.load(
+            texturePath, 
+            function(texture) {
+                let material;
+                
+                if (normalMap) {
+                    textureLoader.load(
+                        normalMap, 
+                        function(normal) {
+                            material = new THREE.MeshStandardMaterial({
+                                map: texture,
+                                normalMap: normal,
+                                metalness: 0.1,
+                                roughness: 0.8
+                            });
+                            completePlanetSetup();
+                        },
+                        undefined,
+                        function() {
+                            // 法线贴图加载失败，继续使用纹理
+                            material = new THREE.MeshStandardMaterial({
+                                map: texture,
+                                metalness: 0.1,
+                                roughness: 0.8
+                            });
+                            completePlanetSetup();
+                        }
+                    );
+                } else {
                     material = new THREE.MeshStandardMaterial({
                         map: texture,
-                        normalMap: normal,
                         metalness: 0.1,
                         roughness: 0.8
                     });
                     completePlanetSetup();
-                });
-            } else {
-                material = new THREE.MeshStandardMaterial({
-                    map: texture,
+                }
+            },
+            undefined,
+            function() {
+                // 纹理加载失败时，使用备用颜色
+                console.log(`Failed to load texture for ${name}, using color fallback`);
+                const material = new THREE.MeshStandardMaterial({
+                    color: color,
                     metalness: 0.1,
                     roughness: 0.8
                 });
-                completePlanetSetup();
+                completePlanetSetup(material);
             }
+        );
+        
+        function completePlanetSetup(fallbackMaterial) {
+            const material = fallbackMaterial || this.material;
+            const planet = new THREE.Mesh(planetGeometry, material);
             
-            function completePlanetSetup() {
-                const planet = new THREE.Mesh(planetGeometry, material);
-                
-                // 轨道
-                planet.userData = {
-                    name: name,
-                    distance: distance,
-                    orbitalSpeed: orbitalSpeed,
-                    rotationSpeed: rotationSpeed,
-                    tilt: tilt,
-                    originalPosition: new THREE.Vector3(distance, 0, 0)
-                };
-                
-                // 设置位置和倾斜角度
-                planet.position.x = distance;
-                planet.rotation.x = tilt;
-                
-                // 接收阴影
-                planet.castShadow = true;
-                planet.receiveShadow = true;
-                
-                scene.add(planet);
-                planets[name] = planet;
-            }
-        });
+            // 轨道
+            planet.userData = {
+                name: name,
+                distance: distance,
+                orbitalSpeed: orbitalSpeed,
+                rotationSpeed: rotationSpeed,
+                tilt: tilt,
+                originalPosition: new THREE.Vector3(distance, 0, 0)
+            };
+            
+            // 设置位置和倾斜角度
+            planet.position.x = distance;
+            planet.rotation.x = tilt;
+            
+            // 接收阴影
+            planet.castShadow = true;
+            planet.receiveShadow = true;
+            
+            scene.add(planet);
+            planets[name] = planet;
+        }
     } else {
         const material = new THREE.MeshStandardMaterial({
             color: color,
@@ -265,112 +299,76 @@ function createSaturnRings(saturn) {
     const outerRadius = 18;
     const ringGeometry = new THREE.RingGeometry(innerRadius, outerRadius, 64);
     
-    // 调整顶点以创建平面环
-    const pos = ringGeometry.attributes.position;
-    const v3 = new THREE.Vector3();
-    
-    for (let i = 0; i < pos.count; i++) {
-        v3.fromBufferAttribute(pos, i);
-        ringGeometry.attributes.uv.setXY(i, v3.length() < (innerRadius + outerRadius) / 2 ? 0 : 1, 1);
-        
-        if (v3.x < 0) {
-            v3.z = -0.05 * v3.y;
-        } else {
-            v3.z = 0.05 * v3.y;
-        }
-        
-        pos.setXYZ(i, v3.x, v3.y, v3.z);
-    }
-    
-    const textureLoader = new THREE.TextureLoader();
-    textureLoader.load('textures/saturn_rings.png', function(texture) {
-        const ringMaterial = new THREE.MeshStandardMaterial({
-            map: texture,
-            side: THREE.DoubleSide,
-            transparent: true,
-            opacity: 0.8,
-            roughness: 0.7
-        });
-        
-        const ring = new THREE.Mesh(ringGeometry, ringMaterial);
-        ring.rotation.x = Math.PI / 2;
-        ring.castShadow = true;
-        ring.receiveShadow = true;
-        
-        saturn.add(ring);
+    // 使用简单材质，不依赖纹理
+    const ringMaterial = new THREE.MeshBasicMaterial({
+        color: 0xCCBB99,
+        side: THREE.DoubleSide,
+        transparent: true,
+        opacity: 0.8
     });
+    
+    const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+    ring.rotation.x = Math.PI / 2;
+    
+    saturn.add(ring);
 }
 
 // 创建小行星带
 function createAsteroidBelt(count, minRadius, maxRadius, minSize, maxSize) {
+    // 减少小行星数量以提高性能
+    const reducedCount = Math.min(count, 30);
+    
     const asteroidGeometries = [
         new THREE.IcosahedronGeometry(1, 0),
         new THREE.TetrahedronGeometry(1, 0),
         new THREE.DodecahedronGeometry(1, 0)
     ];
     
-    const textureLoader = new THREE.TextureLoader();
-    textureLoader.load('textures/asteroid.jpg', function(texture) {
-        for (let i = 0; i < count; i++) {
-            const radius = Math.random() * (maxRadius - minRadius) + minRadius;
-            const angle = Math.random() * Math.PI * 2;
-            
-            // 随机选择一个几何体
-            const randGeo = asteroidGeometries[Math.floor(Math.random() * asteroidGeometries.length)];
-            
-            // 随机大小
-            const size = Math.random() * (maxSize - minSize) + minSize;
-            const geometry = randGeo.clone();
-            geometry.scale(size, size, size);
-            
-            // 添加一些噪声使其不规则
-            const positions = geometry.attributes.position;
-            for (let j = 0; j < positions.count; j++) {
-                const vertex = new THREE.Vector3();
-                vertex.fromBufferAttribute(positions, j);
-                
-                // 添加随机偏移
-                vertex.x += (Math.random() - 0.5) * 0.2 * size;
-                vertex.y += (Math.random() - 0.5) * 0.2 * size;
-                vertex.z += (Math.random() - 0.5) * 0.2 * size;
-                
-                positions.setXYZ(j, vertex.x, vertex.y, vertex.z);
-            }
-            
-            const material = new THREE.MeshStandardMaterial({
-                map: texture,
-                roughness: 0.8,
-                metalness: 0.2
-            });
-            
-            const asteroid = new THREE.Mesh(geometry, material);
-            
-            // 设置位置
-            asteroid.position.x = Math.cos(angle) * radius;
-            asteroid.position.z = Math.sin(angle) * radius;
-            asteroid.position.y = (Math.random() - 0.5) * 5;
-            
-            // 随机旋转
-            asteroid.rotation.x = Math.random() * Math.PI;
-            asteroid.rotation.y = Math.random() * Math.PI;
-            asteroid.rotation.z = Math.random() * Math.PI;
-            
-            // 设置数据
-            asteroid.userData = {
-                radius: radius,
-                angle: angle,
-                rotationSpeed: Math.random() * 0.01 + 0.005,
-                orbitalSpeed: 0.002 / (radius / 100),
-                isAsteroid: true
-            };
-            
-            asteroid.castShadow = true;
-            asteroid.receiveShadow = true;
-            
-            scene.add(asteroid);
-            asteroids.push(asteroid);
-        }
-    });
+    // 直接创建小行星，不使用纹理
+    for (let i = 0; i < reducedCount; i++) {
+        const radius = Math.random() * (maxRadius - minRadius) + minRadius;
+        const angle = Math.random() * Math.PI * 2;
+        
+        // 随机选择一个几何体
+        const randGeo = asteroidGeometries[Math.floor(Math.random() * asteroidGeometries.length)];
+        
+        // 随机大小
+        const size = Math.random() * (maxSize - minSize) + minSize;
+        const geometry = randGeo.clone();
+        
+        const material = new THREE.MeshStandardMaterial({
+            color: 0x777777,
+            roughness: 0.8,
+            metalness: 0.2
+        });
+        
+        const asteroid = new THREE.Mesh(geometry, material);
+        
+        // 设置位置
+        asteroid.position.x = Math.cos(angle) * radius;
+        asteroid.position.z = Math.sin(angle) * radius;
+        asteroid.position.y = (Math.random() - 0.5) * 5;
+        
+        // 设置缩放
+        asteroid.scale.set(size, size, size);
+        
+        // 随机旋转
+        asteroid.rotation.x = Math.random() * Math.PI;
+        asteroid.rotation.y = Math.random() * Math.PI;
+        asteroid.rotation.z = Math.random() * Math.PI;
+        
+        // 设置数据
+        asteroid.userData = {
+            radius: radius,
+            angle: angle,
+            rotationSpeed: Math.random() * 0.01 + 0.005,
+            orbitalSpeed: 0.002 / (radius / 100),
+            isAsteroid: true
+        };
+        
+        scene.add(asteroid);
+        asteroids.push(asteroid);
+    }
 }
 
 // 创建行星轨道
@@ -455,6 +453,8 @@ function createStarField(count) {
 
 // 创建星云
 function createNebulae() {
+    // 简化星云创建，防止noise函数错误
+    // 使用简单的粒子系统来模拟星云
     const positions = [
         new THREE.Vector3(-200, 100, -400),
         new THREE.Vector3(300, -50, -350),
@@ -470,7 +470,40 @@ function createNebulae() {
     const sizes = [120, 150, 100];
     
     for (let i = 0; i < positions.length; i++) {
-        const nebula = createNebula(positions[i], colors[i], sizes[i]);
+        // 创建简单粒子云
+        const particleCount = 1000;
+        const particles = new THREE.BufferGeometry();
+        const particlePositions = new Float32Array(particleCount * 3);
+        
+        const color = colors[i];
+        const size = sizes[i];
+        const center = positions[i];
+        
+        for (let p = 0; p < particleCount; p++) {
+            // 创建球形云
+            const radius = size * Math.random();
+            const theta = Math.random() * Math.PI * 2;
+            const phi = Math.random() * Math.PI;
+            
+            particlePositions[p * 3] = center.x + radius * Math.sin(phi) * Math.cos(theta);
+            particlePositions[p * 3 + 1] = center.y + radius * Math.sin(phi) * Math.sin(theta);
+            particlePositions[p * 3 + 2] = center.z + radius * Math.cos(phi);
+        }
+        
+        particles.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
+        
+        const material = new THREE.PointsMaterial({
+            size: 2,
+            color: color,
+            transparent: true,
+            opacity: 0.5,
+            blending: THREE.AdditiveBlending
+        });
+        
+        const nebula = new THREE.Points(particles, material);
+        nebula.userData = { rotationSpeed: 0.0001 };
+        
+        scene.add(nebula);
         nebulae.push(nebula);
     }
 }
@@ -558,44 +591,27 @@ function createNebula(position, color, size) {
 
 // 设置后期处理
 function setupPostProcessing() {
-    // 创建Bloom渲染通道
-    bloomLayer = new THREE.Layers();
-    bloomLayer.set(1);
-    
-    // 设置发光物体
-    planets.sun.layers.enable(1);
-    
-    const renderScene = new THREE.RenderPass(scene, camera);
-    
-    bloomPass = new THREE.UnrealBloomPass(
-        new THREE.Vector2(window.innerWidth, window.innerHeight),
-        1.5,   // 强度
-        0.4,   // 半径
-        0.85   // 阈值
-    );
-    
-    const bloomComposer = new THREE.EffectComposer(renderer);
-    bloomComposer.addPass(renderScene);
-    bloomComposer.addPass(bloomPass);
-    
-    // 添加渲染混合
-    const finalPass = new THREE.ShaderPass(
-        new THREE.ShaderMaterial({
-            uniforms: {
-                baseTexture: { value: null },
-                bloomTexture: { value: bloomComposer.renderTarget2.texture }
-            },
-            vertexShader: bloomVertexShader,
-            fragmentShader: bloomFragmentShader,
-            defines: {}
-        }),
-        'baseTexture'
-    );
-    finalPass.needsSwap = true;
-    
-    composer = new THREE.EffectComposer(renderer);
-    composer.addPass(renderScene);
-    composer.addPass(finalPass);
+    try {
+        // 简化后期处理，直接使用基本渲染
+        const renderScene = new THREE.RenderPass(scene, camera);
+        composer = new THREE.EffectComposer(renderer);
+        composer.addPass(renderScene);
+        
+        // 设置基本的发光效果
+        if (THREE.UnrealBloomPass) {
+            bloomPass = new THREE.UnrealBloomPass(
+                new THREE.Vector2(window.innerWidth, window.innerHeight),
+                1.0,   // 强度
+                0.4,   // 半径
+                0.85   // 阈值
+            );
+            composer.addPass(bloomPass);
+        }
+    } catch (e) {
+        console.error("Error setting up post-processing:", e);
+        // 如果后期处理设置失败，使用基本渲染器
+        composer = null;
+    }
 }
 
 // 更新天体位置和旋转
@@ -664,7 +680,11 @@ function animate() {
     updateCelestialBodies(delta);
     
     // 更新后期处理
-    composer.render();
+    if (composer) {
+        composer.render();
+    } else {
+        renderer.render(scene, camera);
+    }
     
     // 更新性能监控
     stats.update();
