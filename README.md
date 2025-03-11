@@ -7,7 +7,7 @@
 
 An interactive universe scene demonstration showcasing advanced Three.js framework capabilities. This project creates an interactive solar system model, including planets, asteroid belts, nebulae, and black holes, with various visual effects and user interactions.
 
-![Solar System Preview](https://via.placeholder.com/800x400?text=Solar+System+Preview)
+<img src="screenshot.png" alt="Solar System Preview" width="600" />
 
 ## Features
 
