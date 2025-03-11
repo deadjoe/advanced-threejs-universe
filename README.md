@@ -1,110 +1,157 @@
-# 高级 Three.js 宇宙场景演示
+# Advanced Three.js Universe Demonstration
 
-这是一个展示 Three.js 框架高级功能的宇宙场景演示项目。该项目创建了一个交互式太阳系模型，包含行星、小行星带、星云和黑洞，并支持多种视觉效果和用户交互。
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Three.js](https://img.shields.io/badge/Three.js-r149-blue.svg)](https://threejs.org/)
+[![WebGL](https://img.shields.io/badge/WebGL-2.0-green.svg)](https://www.khronos.org/webgl/)
+[![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)](https://github.com/yourusername/advanced-threejs-universe/graphs/commit-activity)
 
-## 功能特点
+An interactive universe scene demonstration showcasing advanced Three.js framework capabilities. This project creates an interactive solar system model, including planets, asteroid belts, nebulae, and black holes, with various visual effects and user interactions.
 
-### 核心功能
+![Solar System Preview](https://via.placeholder.com/800x400?text=Solar+System+Preview)
 
-- 完整的太阳系模型，包括太阳、八大行星和月球
-- 小行星带模拟
-- 行星轨道可视化
-- 星云和星域背景
-- 响应式设计，适应各种屏幕尺寸
-- 灵活的场景布局，使用Group容器实现整体移动
+## Features
 
-### 视觉效果
+### Core Functionality
 
-- 高级着色器效果（自定义太阳材质、星云粒子系统）
-- 后期处理（Bloom发光效果）
-- 逼真的行星纹理
-- 法线贴图增强表面细节
-- 粒子系统创建星云和星域
+- Complete solar system model including the sun, eight planets, and moon
+- Asteroid belt simulation
+- Planetary orbit visualization
+- Nebula and star field background
+- Responsive design for various screen sizes
+- Flexible scene layout using Group containers for unified movement
 
-### 交互功能
+### Visual Effects
 
-- 轨道控制器允许用户自由旋转和缩放场景
-- 点击天体显示详细信息
-- 用户可以调整星星数量和光照强度
-- 预设场景切换（太阳系、星云景观、黑洞环境）
-- 性能监控（FPS计数器）
+- Advanced shader effects (custom sun material, nebula particle systems)
+- Post-processing (Bloom glow effects)
+- Realistic planet textures
+- Normal maps for enhanced surface details
+- Particle systems for nebulae and star fields
 
-## 技术实现
+### Interactive Features
 
-- **Three.js**: 核心3D渲染库
-- **自定义着色器**: GLSL着色器用于创建高级视觉效果
-- **后期处理**: 使用EffectComposer和UnrealBloomPass
-- **粒子系统**: 使用Points和BufferGeometry创建星云和星域
-- **数学模型**: 使用数学模型模拟行星运动和开普勒定律
-- **场景组织**: 使用Three.js Group对象实现场景层级和整体移动
-- **柏林噪声**: 用于生成星云的自然形态
-- **补间动画**: 平滑相机过渡和UI动画
+- Orbit controls allowing users to freely rotate and zoom the scene
+- Click on celestial bodies to display detailed information
+- Adjust star count and lighting intensity
+- Switch between preset scenes (solar system, nebula landscape, black hole environment)
+- Performance monitoring (FPS counter)
 
-## 项目结构
+## Technical Implementation
+
+- **Three.js**: Core 3D rendering library
+- **Custom Shaders**: GLSL shaders for advanced visual effects
+- **Post-processing**: Using EffectComposer and UnrealBloomPass
+- **Particle Systems**: Using Points and BufferGeometry for nebulae and star fields
+- **Mathematical Models**: Simulating planetary motion and Kepler's laws
+- **Scene Organization**: Using Three.js Group objects for scene hierarchy and unified movement
+- **Perlin Noise**: For generating natural nebula formations
+- **Tween Animations**: Smooth camera transitions and UI animations
+
+## Project Structure
 
 ```
 /
-├── index.html            # 主HTML文件
+├── index.html            # Main HTML file
 ├── css/
-│   └── style.css         # 样式表
+│   └── style.css         # Stylesheet
 ├── js/
-│   ├── main.js           # 完整功能实现
-│   ├── minimal.js        # 精简版实现，优化性能
-│   ├── main-improved.js  # 增强版实现
-│   ├── simplescene.js    # 基础场景实现
-│   ├── celestialBodies.js # 天体数据
-│   ├── effects.js        # 视觉效果
-│   └── interactions.js   # 用户交互
-└── textures/             # 纹理图片目录
+│   ├── main.js           # Full implementation
+│   ├── minimal.js        # Simplified version for performance optimization
+│   ├── main-improved.js  # Enhanced implementation
+│   ├── simplescene.js    # Basic scene implementation
+│   ├── celestialBodies.js # Celestial body data
+│   ├── effects.js        # Visual effects
+│   └── interactions.js   # User interactions
+└── textures/             # Texture image directory
 ```
 
-## 使用方法
+## Local Setup
 
-1. 确保已安装现代浏览器（Chrome、Firefox、Safari或Edge的最新版本）
-2. 克隆或下载此仓库
-3. 由于使用了模块加载，需要通过Web服务器访问（如使用VSCode的Live Server扩展）
-4. 打开浏览器访问项目
+### Prerequisites
 
-## 交互指南
+- Modern web browser (latest version of Chrome, Firefox, Safari, or Edge)
+- Local web server (for serving the files)
 
-- **旋转视图**: 点击并拖动
-- **缩放视图**: 滚动鼠标滚轮
-- **查看天体信息**: 点击任何行星或太阳
-- **调整星星数量**: 使用右下角控制面板的滑块
-- **调整光照强度**: 使用右下角控制面板的滑块
-- **切换自动旋转**: 点击"自动旋转"按钮
-- **重置视图**: 点击"重置相机"按钮
-- **切换场景**: 点击预设场景按钮（太阳系、星云、黑洞）
+### Installation
 
-## 纹理资源
+1. Clone this repository:
+   ```bash
+   git clone https://github.com/yourusername/advanced-threejs-universe.git
+   cd advanced-threejs-universe
+   ```
 
-该项目需要以下纹理图片（未包含在代码中）：
+2. Start a local web server:
 
-- 行星纹理: mercury.jpg, venus.jpg, earth.jpg, mars.jpg, jupiter.jpg, saturn.jpg, uranus.jpg, neptune.jpg
-- 地球法线贴图: earth_normal.jpg
-- 土星环纹理: saturn_rings.png
-- 月球纹理: moon.jpg
-- 小行星纹理: asteroid.jpg
+   **Using Visual Studio Code:**
+   - Install the "Live Server" extension
+   - Right-click on `index.html` and select "Open with Live Server"
 
-您可以从NASA或其他免费资源网站获取这些纹理。
+   **Using Python:**
+   ```bash
+   # Python 3
+   python -m http.server 8000
+   
+   # Python 2
+   python -m SimpleHTTPServer 8000
+   ```
 
-## 性能注意事项
+   **Using Node.js:**
+   ```bash
+   # Install http-server globally if you don't have it
+   npm install -g http-server
+   
+   # Start the server
+   http-server -p 8000
+   ```
 
-- 后期处理和粒子系统在低端设备上可能会影响性能
-- 如果体验卡顿，请减少星星数量或关闭自动旋转
-- 在移动设备上，某些高级效果可能会自动降级以提高性能
+3. Open your browser and navigate to:
+   - VS Code Live Server: http://localhost:5500
+   - Python/Node.js: http://localhost:8000
 
-## 最新更新与优化
+### Important Note
 
-该项目最近进行了多项更新与优化：
+This project requires a web server to run properly because it loads JavaScript modules. Opening the HTML file directly in a browser will not work due to CORS restrictions.
 
-- 改进了场景组织结构，使用Group容器实现太阳系整体移动
-- 优化了行星自转速度，基于行星大小调整自转速率
-- 改进了小行星带的渲染和动画
-- 优化了相机视角，提供更好的观察体验
-- 精简了渲染流程，提高了性能
-- 支持移动设备的响应式设计
+## User Guide
 
-## 许可
+- **Rotate View**: Click and drag
+- **Zoom View**: Scroll mouse wheel
+- **View Celestial Body Information**: Click on any planet or sun
+- **Adjust Star Count**: Use the slider in the bottom right control panel
+- **Adjust Light Intensity**: Use the slider in the bottom right control panel
+- **Toggle Auto-rotation**: Click the "Auto-rotate" button
+- **Reset View**: Click the "Reset Camera" button
+- **Switch Scenes**: Click the preset scene buttons (Solar System, Nebula, Black Hole)
 
-此项目使用MIT许可证。请随意使用和修改代码，但请保留原始作者的署名。
+## Texture Resources
+
+This project requires the following texture images (not included in the code):
+
+- Planet textures: mercury.jpg, venus.jpg, earth.jpg, mars.jpg, jupiter.jpg, saturn.jpg, uranus.jpg, neptune.jpg
+- Earth normal map: earth_normal.jpg
+- Saturn rings texture: saturn_rings.png
+- Moon texture: moon.jpg
+- Asteroid texture: asteroid.jpg
+
+You can obtain these textures from NASA or other free resource websites.
+
+## Performance Considerations
+
+- Post-processing and particle systems may affect performance on low-end devices
+- If experiencing lag, reduce the star count or turn off auto-rotation
+- On mobile devices, some advanced effects may automatically downgrade for better performance
+
+## Recent Updates and Optimizations
+
+The project has recently undergone several updates and optimizations:
+
+- Improved scene organization structure, using Group containers for unified solar system movement
+- Optimized planet rotation speeds, adjusting rotation rates based on planet size
+- Improved asteroid belt rendering and animation
+- Optimized camera angles for better viewing experience
+- Streamlined rendering process for better performance
+- Added responsive design support for mobile devices
+
+## License
+
+This project is licensed under the MIT License. Feel free to use and modify the code, but please retain the original author attribution.
