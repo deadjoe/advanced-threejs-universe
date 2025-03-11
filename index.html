@@ -67,22 +67,72 @@
     
     <div id="stats"></div>
     
-    <!-- Three.js 核心库 - 回退到之前工作的版本 -->
-    <script src="https://cdn.jsdelivr.net/npm/three@0.149.0/build/three.min.js"></script>
+    <!-- 诊断信息面板 -->
+    <div id="diagnostics" style="position:fixed; bottom:10px; right:10px; background:rgba(0,0,0,0.7); color:white; padding:10px; font-family:monospace; z-index:1000;">
+        WebGL状态: <span id="webgl-status">检测中...</span><br>
+        Three.js版本: <span id="threejs-version">检测中...</span><br>
+        渲染状态: <span id="render-status">等待中...</span>
+    </div>
+    
+    <!-- 检测WebGL支持 -->
+    <script>
+        // 检测WebGL支持
+        function checkWebGL() {
+            try {
+                const canvas = document.createElement('canvas');
+                const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+                
+                if (!gl) {
+                    document.getElementById('webgl-status').innerHTML = '<span style="color:red">不支持</span>';
+                    alert('您的浏览器不支持WebGL，可能无法正常显示3D内容');
+                    return false;
+                }
+                
+                const info = {
+                    vendor: gl.getParameter(gl.VENDOR),
+                    renderer: gl.getParameter(gl.RENDERER),
+                    version: gl.getParameter(gl.VERSION)
+                };
+                
+                document.getElementById('webgl-status').innerHTML = '<span style="color:green">支持</span> - ' + info.renderer;
+                return true;
+            } catch (e) {
+                document.getElementById('webgl-status').innerHTML = '<span style="color:red">检测出错</span> - ' + e.message;
+                return false;
+            }
+        }
+        
+        window.addEventListener('load', checkWebGL);
+    </script>
+    
+    <!-- Three.js核心库和轨道控制器 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.149.0/three.min.js"></script>
+    <!-- 只添加OrbitControls扩展 -->
     <script src="https://cdn.jsdelivr.net/npm/three@0.149.0/examples/js/controls/OrbitControls.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.149.0/examples/js/libs/stats.min.js"></script>
     
-    <!-- Three.js 后期处理扩展 - 使用匹配的版本 -->
-    <script src="https://cdn.jsdelivr.net/npm/three@0.149.0/examples/js/postprocessing/EffectComposer.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.149.0/examples/js/postprocessing/RenderPass.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.149.0/examples/js/postprocessing/ShaderPass.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.149.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.149.0/examples/js/shaders/CopyShader.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.149.0/examples/js/shaders/FXAAShader.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.149.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
+    <!-- 检查Three.js是否正确加载 -->
+    <script>
+        window.addEventListener('DOMContentLoaded', function() {
+            if (typeof THREE === 'undefined') {
+                console.error('THREE.js库加载失败！');
+                document.getElementById('threejs-version').innerHTML = '<span style="color:red">加载失败</span>';
+                alert('THREE.js库加载失败，请检查网络连接或尝试使用不同的浏览器');
+            } else {
+                console.log('THREE.js加载成功，版本:', THREE.REVISION);
+                document.getElementById('threejs-version').innerHTML = 
+                    '<span style="color:green">v' + THREE.REVISION + '</span>';
+            }
+        });
+    </script>
     
-    <!-- 自定义 JavaScript -->
+    <!-- 最小化版本，确保渲染基础功能正常 -->
+    <script src="js/minimal.js"></script>
+    
+    <!-- 其他版本备用
     <script src="js/celestialBodies.js"></script>
+    <script src="js/main-improved.js"></script>
+    <script src="js/simplescene.js"></script>
     <script src="js/main.js"></script>
+    -->
 </body>
 </html>

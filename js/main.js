@@ -85,41 +85,41 @@ function init() {
         bloomLayer = new THREE.Layers();
         bloomLayer.set(1); // 将辉光效果放在第1层
         
+        // 检查辉光是否工作
+        console.log("初始化辉光层: ", bloomLayer);
+        
         // 创建场景
         scene = new THREE.Scene();
         scene.background = new THREE.Color(0x000000);
         
-        // 创建相机
+        // 创建相机 - 调整位置确保能看到所有行星
         camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.set(0, 30, 90);
+        camera.position.set(0, 50, 120);
+        console.log("相机位置设置为:", camera.position);
         
-        // 创建渲染器 - 使用兼容性更好的设置
+        // 创建渲染器 - 使用最基本的设置确保兼容性
         renderer = new THREE.WebGLRenderer({ 
             antialias: true
         });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setPixelRatio(window.devicePixelRatio);
-        renderer.shadowMap.enabled = true;
         
-        // 尝试应用高级特性，但提供兼容性保障
+        // 非常重要: 只使用最基本设置，确保渲染器能工作
         try {
-            // 检查新版本常量名称
-            if (THREE.ACESFilmicToneMapping !== undefined) {
-                renderer.toneMapping = THREE.ACESFilmicToneMapping;
-                renderer.toneMappingExposure = 1.0;
-            }
-            
-            // 针对0.149.0版本使用旧的编码API
+            // 尝试设置v0.149.0的outputEncoding
             if (THREE.sRGBEncoding !== undefined) {
                 renderer.outputEncoding = THREE.sRGBEncoding;
-                console.log("使用旧版本编码API (v149)");
-            } else if (renderer.outputColorSpace !== undefined && THREE.SRGBColorSpace !== undefined) {
-                // 新API (v150+) - 保留以备将来升级
-                renderer.outputColorSpace = THREE.SRGBColorSpace;
-                console.log("使用新版本色彩空间API");
+                console.log("成功设置outputEncoding = sRGBEncoding");
             }
+            
+            // 记录渲染器信息
+            console.log("渲染器创建成功:", {
+                domElement: !!renderer.domElement,
+                antialias: renderer.antialias,
+                size: `${window.innerWidth}x${window.innerHeight}`
+            });
         } catch (e) {
-            console.warn("高级渲染特性不可用，使用基础渲染设置", e);
+            console.warn("渲染器设置失败，使用完全基础设置:", e);
         }
         
         const container = document.getElementById('container');
@@ -144,13 +144,24 @@ function init() {
         scene.add(ambientLight);
         
         // 创建太阳系
+        console.log("开始创建太阳系...");
         createSolarSystem();
+        console.log("太阳系创建完成, 场景对象数量:", scene.children.length);
         
-        // 创建背景星星
-        createStars(1000);
+        // 创建简单背景星星
+        console.log("开始创建背景星星...");
+        createSimpleStarfield(1000);
+        console.log("背景星星创建完成, 场景对象数量:", scene.children.length);
         
-        // 设置后期处理效果
+        // 设置最简单的后期处理效果
         setupPostProcessing();
+        
+        // 额外验证，确保场景中有对象
+        if (scene.children.length === 0) {
+            console.error("严重错误: 场景中没有对象!");
+        } else {
+            console.log("初始化完成，场景包含", scene.children.length, "个对象");
+        }
         
         // 添加窗口调整事件
         window.addEventListener('resize', onWindowResize);
@@ -208,183 +219,55 @@ function checkSupport() {
     return supported;
 }
 
-// 设置后期处理效果
+// 设置后期处理效果 - 简化版本，只添加性能监控
 function setupPostProcessing() {
-    try {
-        // 检查必要的类是否已加载 - 针对v0.149.0检查全局变量而非THREE命名空间
-        if (typeof EffectComposer === 'undefined' ||
-            typeof RenderPass === 'undefined' ||
-            typeof UnrealBloomPass === 'undefined' ||
-            typeof ShaderPass === 'undefined' ||
-            typeof FXAAShader === 'undefined') {
+    console.log("*** 已禁用后期处理效果，使用基本渲染 ***");
+    composer = null;
+    
+    // 只添加性能信息显示
+    if (typeof Stats !== 'undefined') {
+        try {
+            const stats = new Stats();
+            stats.showPanel(0); // 0: fps, 1: ms, 2: mb
+            const statsElement = document.getElementById('stats');
+            if (statsElement) {
+                statsElement.appendChild(stats.dom);
+            }
             
-            console.warn("后期处理所需的类未加载，使用标准渲染");
-            console.warn("缺少的类:", 
-                typeof EffectComposer === 'undefined' ? "EffectComposer " : "",
-                typeof RenderPass === 'undefined' ? "RenderPass " : "",
-                typeof UnrealBloomPass === 'undefined' ? "UnrealBloomPass " : "",
-                typeof ShaderPass === 'undefined' ? "ShaderPass " : "",
-                typeof FXAAShader === 'undefined' ? "FXAAShader" : ""
-            );
-            composer = null;
-            return;
+            // 仅在每帧更新性能计数器
+            window._statsUpdate = function() {
+                stats.update();
+                requestAnimationFrame(window._statsUpdate);
+            };
+            window._statsUpdate();
+        } catch (e) {
+            console.warn("无法初始化性能监控", e);
         }
-        
-        // 检查是否支持高级特性
-        const supported = checkSupport();
-        
-        // 创建后期处理合成器 - 使用适合v0.149.0的全局类
-        composer = new EffectComposer(renderer);
-        
-        // 添加基础渲染通道
-        const renderPass = new RenderPass(scene, camera);
-        composer.addPass(renderPass);
-        
-        if (supported) {
-            // 添加辉光效果 - 只对特定对象生效
-            // 参数: resolution, strength, radius, threshold
-            bloomPass = new UnrealBloomPass(
-                new THREE.Vector2(window.innerWidth, window.innerHeight),
-                0.8,    // 强度
-                0.5,    // 半径
-                0.2     // 阈值
-            );
-            
-            // 新版本中可能提供了额外的参数设置
-            if (bloomPass.threshold !== undefined) {
-                bloomPass.threshold = 0.2;
-            }
-            if (bloomPass.strength !== undefined) {
-                bloomPass.strength = 0.8;
-            }
-            if (bloomPass.radius !== undefined) {
-                bloomPass.radius = 0.5;
-            }
-            
-            composer.addPass(bloomPass);
-            
-            // 添加FXAA抗锯齿
-            effectFXAA = new ShaderPass(FXAAShader);
-            // 更新分辨率，兼容不同版本API
-            if (effectFXAA.uniforms['resolution'] !== undefined) {
-                effectFXAA.uniforms['resolution'].value.set(1 / window.innerWidth, 1 / window.innerHeight);
-            } else if (effectFXAA.uniforms.resolution !== undefined) {
-                effectFXAA.uniforms.resolution.value.set(1 / window.innerWidth, 1 / window.innerHeight);
-            }
-            composer.addPass(effectFXAA);
-            
-            // 设置辉光对象
-            scene.traverse(obj => {
-                // 太阳和行星光晕应该发光
-                if (obj.userData && obj.userData.isGlow) {
-                    obj.layers.enable(1);
-                }
-                // 星云也应该发光
-                if (obj instanceof THREE.Points && obj.userData && obj.userData.isNebula) {
-                    obj.layers.enable(1);
-                }
-                // 太阳应该发光
-                if (obj === planets.sun) {
-                    obj.layers.enable(1);
-                }
-                // 明亮的恒星也应该发光
-                if (obj.userData && obj.userData.isBrightStars) {
-                    obj.layers.enable(1);
-                }
-            });
-        }
-        
-        // 添加性能信息显示
-        if (typeof Stats !== 'undefined') {
-            try {
-                const stats = new Stats();
-                stats.showPanel(0); // 0: fps, 1: ms, 2: mb
-                const statsElement = document.getElementById('stats');
-                if (statsElement) {
-                    statsElement.appendChild(stats.dom);
-                }
-                
-                // 仅在每帧更新性能计数器，而不添加额外通道
-                window._statsUpdate = function() {
-                    stats.update();
-                    requestAnimationFrame(window._statsUpdate);
-                };
-                window._statsUpdate();
-            } catch (e) {
-                console.warn("无法初始化性能监控", e);
-            }
-        }
-        
-        console.log("后期处理效果设置完成");
-    } catch (e) {
-        console.error("设置后期处理效果时出错:", e);
-        console.warn("回退到标准渲染模式");
-        composer = null;
     }
 }
 
 // 创建太阳系
 function createSolarSystem() {
-    // 太阳 - 始终应该使用发光材质
+    console.log("开始创建太阳系...");
+    
+    // 创建一个简单的太阳 - 只使用最基本的材质确保兼容性
     const sunGeometry = new THREE.SphereGeometry(8, 32, 32);
+    console.log("创建太阳几何体成功");
     
-    // 使用明亮的发光材质，所有浏览器都支持MeshBasicMaterial
-    let sunMaterial;
-    
-    try {
-        // 在新版本Three.js中尝试创建更好的着色器材质
-        if (THREE.ShaderMaterial !== undefined) {
-            // 简单的自发光着色器
-            sunMaterial = new THREE.ShaderMaterial({
-                uniforms: {
-                    time: { value: 0.0 },
-                    color: { value: new THREE.Color(0xffff00) }
-                },
-                vertexShader: `
-                    varying vec2 vUv;
-                    
-                    void main() {
-                        vUv = uv;
-                        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-                    }
-                `,
-                fragmentShader: `
-                    uniform vec3 color;
-                    uniform float time;
-                    varying vec2 vUv;
-                    
-                    void main() {
-                        // 简单的明亮黄色，带有脉动
-                        float pulse = 0.95 + 0.05 * sin(time * 0.5);
-                        gl_FragColor = vec4(color * pulse, 1.0);
-                    }
-                `
-            });
-            
-            // 将材质添加到更新列表
-            sunMaterial.userData = {
-                isSun: true,
-                time: 0
-            };
-        } else {
-            // 回退到基本材质
-            throw new Error("着色器材质不可用");
-        }
-    } catch (e) {
-        console.warn("太阳着色器材质创建失败，使用基本材质:", e);
-        // 回退到所有版本都兼容的基本材质
-        sunMaterial = new THREE.MeshBasicMaterial({ 
-            color: 0xffff00,     // 明亮的黄色
-            transparent: false,  // 不透明
-            opacity: 1
-        });
-    }
+    // 使用基本材质，所有浏览器都支持MeshBasicMaterial
+    const sunMaterial = new THREE.MeshBasicMaterial({ 
+        color: 0xffff00,     // 明亮的黄色
+        transparent: false   // 不透明
+    });
+    console.log("创建太阳材质成功");
     const sun = new THREE.Mesh(sunGeometry, sunMaterial);
     scene.add(sun);
     planets.sun = sun;
+    console.log("太阳添加到场景成功!");
     
     // 添加太阳光晕
     createSunGlow(sun);
+    console.log("太阳光晕创建成功!");
     
     // 增强太阳光源，提高强度并增加照射距离
     const sunLight = new THREE.PointLight(0xffffff, 2.0, 2000);
@@ -398,14 +281,27 @@ function createSolarSystem() {
     scene.add(helperLight);
     
     // 创建行星
-    createPlanet('mercury', 0.8, 12, 0, 0x888888);
-    createPlanet('venus', 1.2, 16, 0, 0xe39e1c);
-    createPlanet('earth', 1.5, 22, 0.1, 0x2233ff);
-    createPlanet('mars', 1, 28, 0.05, 0xff3300);
-    createPlanet('jupiter', 4, 40, 0.05, 0xd8ca9d);
-    createPlanet('saturn', 3.5, 55, 0.1, 0xf0e2a1);
-    createPlanet('uranus', 2.5, 70, 0.1, 0xa6fff8);
-    createPlanet('neptune', 2.3, 85, 0.1, 0x0000ff);
+    console.log("开始创建行星...");
+    try {
+        createPlanet('mercury', 0.8, 12, 0, 0x888888);
+        console.log("水星创建成功");
+        createPlanet('venus', 1.2, 16, 0, 0xe39e1c);
+        console.log("金星创建成功");
+        createPlanet('earth', 1.5, 22, 0.1, 0x2233ff);
+        console.log("地球创建成功");
+        createPlanet('mars', 1, 28, 0.05, 0xff3300);
+        console.log("火星创建成功");
+        createPlanet('jupiter', 4, 40, 0.05, 0xd8ca9d);
+        console.log("木星创建成功");
+        createPlanet('saturn', 3.5, 55, 0.1, 0xf0e2a1);
+        console.log("土星创建成功");
+        createPlanet('uranus', 2.5, 70, 0.1, 0xa6fff8);
+        console.log("天王星创建成功");
+        createPlanet('neptune', 2.3, 85, 0.1, 0x0000ff);
+        console.log("海王星创建成功");
+    } catch (e) {
+        console.error("创建行星时出错:", e);
+    }
     
     // 创建行星轨道
     createOrbits();
@@ -429,54 +325,29 @@ function createSolarSystem() {
     createNebula(new THREE.Vector3(-100, -80, -180), 0xff6347, 35); // 橙红色星云
 }
 
-// 创建单个行星 - 添加大气层和光晕效果
+// 创建单个行星 - 简化版本，只使用基本材质
 function createPlanet(name, size, distance, tilt, color) {
     try {
-        // 创建行星组，用于包含行星和大气层
+        console.log(`开始创建行星 ${name}...`);
+        
+        // 创建行星组，用于包含行星
         const planetGroup = new THREE.Group();
         
-        // 创建基本行星 - 使用最广泛支持的材质
+        // 创建基本行星几何体
         const planetGeometry = new THREE.SphereGeometry(size, 32, 32);
-        let planetMaterial;
+        console.log(`${name} 几何体创建成功`);
         
-        // 尝试使用更高级的材质，如果失败则回退到基本材质
-        try {
-            planetMaterial = new THREE.MeshLambertMaterial({
-                color: color,
-                emissive: new THREE.Color(color).multiplyScalar(0.2)
-            });
-        } catch (e) {
-            console.warn("高级材质不可用，使用基本材质:", e);
-            planetMaterial = new THREE.MeshBasicMaterial({
-                color: color
-            });
-        }
+        // 只使用最基本的材质，确保兼容性
+        const planetMaterial = new THREE.MeshBasicMaterial({
+            color: color
+        });
         
+        // 创建行星网格
         const planet = new THREE.Mesh(planetGeometry, planetMaterial);
         planetGroup.add(planet);
+        console.log(`${name} 添加到行星组`);
         
-        // 尝试添加高级效果
-        try {
-            // 为特定行星添加大气层效果
-            if (name === 'earth') {
-                // 地球大气层 - 蓝色半透明
-                addAtmosphere(planet, size * 1.05, new THREE.Color(0x3388ff), 0.3);
-            } else if (name === 'venus') {
-                // 金星厚重大气层 - 橙黄色
-                addAtmosphere(planet, size * 1.1, new THREE.Color(0xffcc44), 0.5);
-            } else if (name === 'jupiter' || name === 'saturn') {
-                // 气态巨行星带特殊云层效果
-                addCloudBands(planet, size * 1.02, color);
-            } else if (name === 'uranus' || name === 'neptune') {
-                // 天王星和海王星的淡蓝色大气
-                addAtmosphere(planet, size * 1.05, new THREE.Color(0x99eeff), 0.3);
-            }
-            
-            // 为所有行星添加光晕效果
-            addPlanetGlow(planetGroup, size * 1.4, color, 0.15);
-        } catch (e) {
-            console.warn(`为行星 ${name} 添加特效失败:`, e);
-        }
+        // 不添加任何高级效果，确保基本功能工作
         
         // 设置行星数据
         planetGroup.userData = {
@@ -498,6 +369,7 @@ function createPlanet(name, size, distance, tilt, color) {
         scene.add(planetGroup);
         planets[name] = planetGroup;
         
+        console.log(`${name} 添加到场景成功，位置: x=${planetGroup.position.x}, y=${planetGroup.position.y}, z=${planetGroup.position.z}`);
         return planetGroup;
     } catch (e) {
         console.error(`创建行星 ${name} 时出错:`, e);
@@ -1939,13 +1811,26 @@ function animate() {
         // 更新场景中所有动画元素
         updateScene(delta);
         
-        // 使用后期处理渲染场景
-        if (composer) {
-            // 渲染后期处理效果
-            composer.render();
+        // 完全禁用后期处理，直接使用基础渲染
+        console.log("使用基础渲染 - 已禁用后期处理");
+        renderer.render(scene, camera);
+        
+        // 验证场景对象
+        if (scene.children.length > 0) {
+            // 仅在首次渲染时记录一次
+            if (!window._loggedSceneOnce) {
+                console.log("场景中的对象数量:", scene.children.length);
+                // 列出场景中的所有对象
+                scene.children.forEach((child, index) => {
+                    const type = child.type || "未知类型";
+                    const position = child.position ? 
+                        `位置(${child.position.x.toFixed(2)}, ${child.position.y.toFixed(2)}, ${child.position.z.toFixed(2)})` : "无位置信息";
+                    console.log(`对象 #${index}: ${type}, ${position}`);
+                });
+                window._loggedSceneOnce = true;
+            }
         } else {
-            // 备用直接渲染
-            renderer.render(scene, camera);
+            console.warn("场景中没有对象!");
         }
     } catch (e) {
         console.error("动画循环中出错:", e);
